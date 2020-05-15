@@ -1924,426 +1924,469 @@ class FPDF
 	*	mis metodos
 	**/
 	function SetProtection($permissions=array(), $user_pass='', $owner_pass=null)
+    {
+        $options = array('print' => 4, 'modify' => 8, 'copy' => 16, 'annot-forms' => 32 );
+        $protection = 192;
+        foreach($permissions as $permission)
         {
-            $options = array('print' => 4, 'modify' => 8, 'copy' => 16, 'annot-forms' => 32 );
-            $protection = 192;
-            foreach($permissions as $permission)
+            if (!isset($options[$permission]))
+                $this->Error('Incorrect permission: '.$permission);
+            $protection += $options[$permission];
+        }
+        if ($owner_pass === null)
+            $owner_pass = uniqid(rand());
+        $this->encrypted = true;
+        $this->padding = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF\xFA\x01\x08".
+                        "\x2E\x2E\x00\xB6\xD0\x68\x3E\x80\x2F\x0C\xA9\xFE\x64\x53\x69\x7A";
+        $this->_generateencryptionkey($user_pass, $owner_pass, $protection);
+    }
+    /****************************************************************************
+    *                                                                           *
+    *                              Private methods                              *
+    *                                                                           *
+    ****************************************************************************/
+    function _putstream($s)
+    {
+        if ($this->encrypted)
+            $s = $this->RC4($this->_objectkey($this->n), $s);
+        parent::_putstream($s);
+    }
+    function _textstring($s)
+    {
+        if (!$this->_isascii($s))
+            $s = $this->_UTF8toUTF16($s);
+        if ($this->encrypted)
+            $s = $this->RC4($this->_objectkey($this->n), $s);
+        return '('.$this->_escape($s).')';
+    }
+    /**
+    * Compute key depending on object number where the encrypted data is stored
+    */
+    function _objectkey($n)
+    {
+        return substr($this->_md5_16($this->encryption_key.pack('VXxx',$n)),0,10);
+    }
+    function _putresources()
+    {
+        parent::_putresources();
+        if ($this->encrypted) {
+            $this->_newobj();
+            $this->enc_obj_id = $this->n;
+            $this->_put('<<');
+            $this->_putencryption();
+            $this->_put('>>');
+            $this->_put('endobj');
+        }
+    }
+    function _putencryption()
+    {
+        $this->_put('/Filter /Standard');
+        $this->_put('/V 1');
+        $this->_put('/R 2');
+        $this->_put('/O ('.$this->_escape($this->Ovalue).')');
+        $this->_put('/U ('.$this->_escape($this->Uvalue).')');
+        $this->_put('/P '.$this->Pvalue);
+    }
+    function _puttrailer()
+    {
+        parent::_puttrailer();
+        if ($this->encrypted) {
+            $this->_put('/Encrypt '.$this->enc_obj_id.' 0 R');
+            $this->_put('/ID [()()]');
+        }
+    }
+    /**
+    * Get MD5 as binary string
+    */
+    function _md5_16($string)
+    {
+        return pack('H*',md5($string));
+    }
+    /**
+    * Compute O value
+    */
+    function _Ovalue($user_pass, $owner_pass)
+    {
+        $tmp = $this->_md5_16($owner_pass);
+        $owner_RC4_key = substr($tmp,0,5);
+        return RC4($owner_RC4_key, $user_pass);
+    }
+    /**
+    * Compute U value
+    */
+    function _Uvalue()
+    {
+        return $this->RC4($this->encryption_key, $this->padding);
+    }
+    /**
+    * Compute encryption key
+    */
+    function _generateencryptionkey($user_pass, $owner_pass, $protection)
+    {
+        // Pad passwords
+        $user_pass = substr($user_pass.$this->padding,0,32);
+        $owner_pass = substr($owner_pass.$this->padding,0,32);
+        // Compute O value
+        $this->Ovalue = $this->_Ovalue($user_pass,$owner_pass);
+        // Compute encyption key
+        $tmp = $this->_md5_16($user_pass.$this->Ovalue.chr($protection)."\xFF\xFF\xFF");
+        $this->encryption_key = substr($tmp,0,5);
+        // Compute U value
+        $this->Uvalue = $this->_Uvalue();
+        // Compute P value
+        $this->Pvalue = -(($protection^255)+1);
+    }
+	/** FIN FUNCIONES DE PROTECCION  */
+	function SetYear($year){
+		$this->yearReporte=$year;
+	}
+	function GetYear($type){
+		if($type=='y')
+			return $this->yearReporte;
+		else
+			return $this->yearReporte = date("d/m/").$this->yearReporte;
+	}
+	//Setter images name
+	function setRouteImg($name){
+		if($name != " ")
+		// {
+			$this->routeImg  = "../../img/Logo Institucional/".$name.".jpg";
+			//echo $this->routeImg ;
+			//die();}
+		else
+			$this->routeImg  = "../../img/logosefin-color-fblanco_v2.jpg";
+	}
+	//Getter images route on folder app
+	function getRouteImg(){
+			return $this->routeImg;
+	}
+
+	function SetTopAlign($f=false){
+		$this->topalign=$f;
+	}
+	function SetRelleno($f){
+		$this->relleno = $f;
+	}
+	function SetWidths($w){
+		//Set the array of column widths
+		$this->widths=$w;
+	}
+	function SetArrayBorders($w){
+		//Set the array of column widths
+		$this->arrayBorders=$w;
+	}
+	function SetBorders($b){
+		//Set the border
+		if($b==1)
+			$this->borders='LTBR';
+		else
+			$this->borders=$b;
+	}
+	function GetBorders(){
+		//Get the border
+		return $this->borders;
+	}
+	function SetAltoLinea($alto){
+		//Set the line
+		if($alto=='')
+			$this->altolinea=2.5;
+		else
+			$this->altolinea=$alto;
+	}
+	function GetAltoLinea(){
+		//Get the line
+		return $this->altolinea;
+	}
+	function setEspaciado($e){
+		$this->espaciado=$e;
+	}
+	function SetAligns($a){
+		//Set the array of column alignments
+		$this->aligns=$a;
+	}
+	function setFuentes($a){
+		$this->fuentes = $a;
+	}
+
+
+    function Row($data,$border=''){
+        //CALCULAR EL ALTO DE LAS CELDAS QUE SE DIBUJAN
+        for($i = 0; $i < count($data); $i++){
+            $data[$i] = str_replace( chr(9), chr(32), $data[$i] );
+        }
+
+        $nb=0;
+        $cellNb=array();
+        $altoline=$this->GetAltoLinea();
+        $intercelda=1;
+        for($i = 0; $i < count($data); $i++){
+            if(!empty($this->fuentes)){
+                $this->SetFont($this->fuentes[$i]->font,$this->fuentes[$i]->style,$this->fuentes[$i]->size);
+            }
+            $enebe = $this->NbLines( $this->widths[$i], trim($data[$i]) );
+            $data[$i] = trim($data[$i]);
+            array_push($cellNb,$enebe);
+        }
+        // ALTURA MAXIMA EXPRESADA EN LINEAS  // THE MAX HEIGTH EXPRESSED ON LINES
+        $nb = max($cellNb);
+
+        if($this->topalign ==true){
+            for($i = 0; $i < count($data); $i++){
+                $cellNb[$i]=$nb; //IGUALAMOS TODOS LOS ALTOS PARA QUE SE VEAN PAREJAS LAS CELDAS CONTIGUAS  // ESTABLISH ALL HEIGHTS AS MAXIMUM IS, JUST FOR THE CELLS SHOWS IT AS EQUAL
+                $rest = $nb-$this->NbLines( $this->widths[$i], $data[$i] ); //CALCULAMOS CUANTAS LINEAS MENOS TIENE CADA CELDA QUE NO SEA LA MAS GRANDE  // CALCULATE THE NUMBER OF MISSING LINES BUT THE MAX
+                $nk='';
+                for($h =1;$h<=$rest; $h++){
+                    //AGREGAMOS SALTOS DE LINEA SIMPLES PARA IGUALAR EL NUMERO DE LINEAS /// ADD THE SIMPLE LINES FOR ALL CELLS BE EQUAL
+                    $nk.='
+                    ';
+                }
+
+                ///AGREGAMOS LAS LINEAS QUE LE FALTAN A CADA CELDA PARA LLEGAR AL MAXIMO  // ADD THE LINES TO EACH CELL TO REACH THE MAXIMUN HEIGHT OF THE ARRAY
+                if(trim($data[$i])<>""){
+                    $data[$i]=trim($data[$i]).$nk;
+                }else{
+                    $data[$i]=$data[$i].$nk;
+                }
+            }
+
+        }
+        $nb = max($cellNb);
+
+        $h=($altoline*$nb)+$this->espaciado;
+        //Issue a page break first if needed
+        $this->CheckPageBreak($h);
+
+        //Draw the cells of the row
+        $w = $a = $x = $y = '';
+        $bordeLR = $border == 'LR';
+        for($i=0;$i<count($data);$i++) {
+            $page= $this->PageNo();
+            $borders = 0;
+            if( $bordeLR ){
+                if($i == 0)
+                    $borders = 'L';
+                elseif( $i == count($data)-1 )
+                    $borders = 'R';
+            }else if( !empty($this->arrayBorders) ){
+                $borders = $this->arrayBorders[$i];
+            }else
+                $borders = $this->borders;
+            $w = $this->widths[$i];
+            $a = isset($this->aligns[$i]) ? $this->aligns[$i] : 'L';
+            //Save the current position
+            $x=$this->GetX();
+            $y=$this->GetY();
+            //Draw the border
+            //Print the text
+
+                $altura =(($h-$this->espaciado)/$cellNb[$i])+($this->espaciado/$cellNb[$i]);
+
+            if(!empty($this->fuentes)){
+                $this->SetFont($this->fuentes[$i]->font,$this->fuentes[$i]->style,$this->fuentes[$i]->size);
+            }
+
+            if($this->relleno == "si")
             {
-                if (!isset($options[$permission]))
-                    $this->Error('Incorrect permission: '.$permission);
-                $protection += $options[$permission];
+            $this->MultiCell($w,$altura,$data[$i],$borders,$a,true);}
+            else{$this->MultiCell($w,$altura,$data[$i],$borders,$a);
             }
-            if ($owner_pass === null)
-                $owner_pass = uniqid(rand());
-            $this->encrypted = true;
-            $this->padding = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF\xFA\x01\x08".
-                            "\x2E\x2E\x00\xB6\xD0\x68\x3E\x80\x2F\x0C\xA9\xFE\x64\x53\x69\x7A";
-            $this->_generateencryptionkey($user_pass, $owner_pass, $protection);
+            $this->page=$page;
+            //Put the position to the right of the cell
+            $this->SetXY($x+$w,$y);
         }
-        /****************************************************************************
-        *                                                                           *
-        *                              Private methods                              *
-        *                                                                           *
-        ****************************************************************************/
-        function _putstream($s)
-        {
-            if ($this->encrypted)
-                $s = RC4($this->_objectkey($this->n), $s);
-            parent::_putstream($s);
-        }
-        function _textstring($s)
-        {
-            if (!$this->_isascii($s))
-                $s = $this->_UTF8toUTF16($s);
-            if ($this->encrypted)
-                $s = RC4($this->_objectkey($this->n), $s);
-            return '('.$this->_escape($s).')';
-        }
-        /**
-        * Compute key depending on object number where the encrypted data is stored
-        */
-        function _objectkey($n)
-        {
-            return substr($this->_md5_16($this->encryption_key.pack('VXxx',$n)),0,10);
-        }
-        function _putresources()
-        {
-            parent::_putresources();
-            if ($this->encrypted) {
-                $this->_newobj();
-                $this->enc_obj_id = $this->n;
-                $this->_put('<<');
-                $this->_putencryption();
-                $this->_put('>>');
-                $this->_put('endobj');
-            }
-        }
-        function _putencryption()
-        {
-            $this->_put('/Filter /Standard');
-            $this->_put('/V 1');
-            $this->_put('/R 2');
-            $this->_put('/O ('.$this->_escape($this->Ovalue).')');
-            $this->_put('/U ('.$this->_escape($this->Uvalue).')');
-            $this->_put('/P '.$this->Pvalue);
-        }
-        function _puttrailer()
-        {
-            parent::_puttrailer();
-            if ($this->encrypted) {
-                $this->_put('/Encrypt '.$this->enc_obj_id.' 0 R');
-                $this->_put('/ID [()()]');
-            }
-        }
-        /**
-        * Get MD5 as binary string
-        */
-        function _md5_16($string)
-        {
-            return pack('H*',md5($string));
-        }
-        /**
-        * Compute O value
-        */
-        function _Ovalue($user_pass, $owner_pass)
-        {
-            $tmp = $this->_md5_16($owner_pass);
-            $owner_RC4_key = substr($tmp,0,5);
-            return RC4($owner_RC4_key, $user_pass);
-        }
-        /**
-        * Compute U value
-        */
-        function _Uvalue()
-        {
-            return RC4($this->encryption_key, $this->padding);
-        }
-        /**
-        * Compute encryption key
-        */
-        function _generateencryptionkey($user_pass, $owner_pass, $protection)
-        {
-            // Pad passwords
-            $user_pass = substr($user_pass.$this->padding,0,32);
-            $owner_pass = substr($owner_pass.$this->padding,0,32);
-            // Compute O value
-            $this->Ovalue = $this->_Ovalue($user_pass,$owner_pass);
-            // Compute encyption key
-            $tmp = $this->_md5_16($user_pass.$this->Ovalue.chr($protection)."\xFF\xFF\xFF");
-            $this->encryption_key = substr($tmp,0,5);
-            // Compute U value
-            $this->Uvalue = $this->_Uvalue();
-            // Compute P value
-            $this->Pvalue = -(($protection^255)+1);
-        }
-		/** FIN FUNCIONES DE PROTECCION  */
-		function SetYear($year){
-			$this->yearReporte=$year;
-		}
-		function GetYear($type){
-			if($type=='y')
-				return $this->yearReporte;
-			else
-				return $this->yearReporte = date("d/m/").$this->yearReporte;
-		}
-		//Setter images name
-		function setRouteImg($name){
-			if($name != " ")
-			// {
-				$this->routeImg  = "../../img/Logo Institucional/".$name.".jpg";
-				//echo $this->routeImg ;
-				//die();}
-			else
-				$this->routeImg  = "../../img/logosefin-color-fblanco_v2.jpg";
-		}
-		//Getter images route on folder app
-		function getRouteImg(){
-				return $this->routeImg;
-		}
-
-		function SetTopAlign($f=false){
-			$this->topalign=$f;
-		}
-		function SetRelleno($f){
-			$this->relleno = $f;
-		}
-		function SetWidths($w){
-			//Set the array of column widths
-			$this->widths=$w;
-		}
-		function SetArrayBorders($w){
-			//Set the array of column widths
-			$this->arrayBorders=$w;
-		}
-		function SetBorders($b){
-			//Set the border
-			if($b==1)
-				$this->borders='LTBR';
-			else
-				$this->borders=$b;
-		}
-		function GetBorders(){
-			//Get the border
-			return $this->borders;
-		}
-		function SetAltoLinea($alto){
-			//Set the line
-			if($alto=='')
-				$this->altolinea=2.5;
-			else
-				$this->altolinea=$alto;
-		}
-		function GetAltoLinea(){
-			//Get the line
-			return $this->altolinea;
-		}
-		function setEspaciado($e){
-			$this->espaciado=$e;
-		}
-		function SetAligns($a){
-			//Set the array of column alignments
-			$this->aligns=$a;
-		}
-		function setFuentes($a){
-			$this->fuentes = $a;
-		}
+        $this->fuentes =  NULL;
+        //Go to the next line
+        $this->Ln($h);
+    }
 
 
-        function Row($data,$border=''){
-            //CALCULAR EL ALTO DE LAS CELDAS QUE SE DIBUJAN
-            for($i = 0; $i < count($data); $i++){
-                $data[$i] = str_replace( chr(9), chr(32), $data[$i] );
-            }
-
-            $nb=0;
-            $cellNb=array();
-            $altoline=$this->GetAltoLinea();
-            $intercelda=1;
-            for($i = 0; $i < count($data); $i++){
-                if(!empty($this->fuentes)){
-                    $this->SetFont($this->fuentes[$i]->font,$this->fuentes[$i]->style,$this->fuentes[$i]->size);
-                }
-                $enebe = $this->NbLines( $this->widths[$i], trim($data[$i]) );
-                $data[$i] = trim($data[$i]);
-                array_push($cellNb,$enebe);
-            }
-            // ALTURA MAXIMA EXPRESADA EN LINEAS  // THE MAX HEIGTH EXPRESSED ON LINES
-            $nb = max($cellNb);
-
-            if($this->topalign ==true){
-                for($i = 0; $i < count($data); $i++){
-                    $cellNb[$i]=$nb; //IGUALAMOS TODOS LOS ALTOS PARA QUE SE VEAN PAREJAS LAS CELDAS CONTIGUAS  // ESTABLISH ALL HEIGHTS AS MAXIMUM IS, JUST FOR THE CELLS SHOWS IT AS EQUAL
-                    $rest = $nb-$this->NbLines( $this->widths[$i], $data[$i] ); //CALCULAMOS CUANTAS LINEAS MENOS TIENE CADA CELDA QUE NO SEA LA MAS GRANDE  // CALCULATE THE NUMBER OF MISSING LINES BUT THE MAX
-                    $nk='';
-                    for($h =1;$h<=$rest; $h++){
-                        //AGREGAMOS SALTOS DE LINEA SIMPLES PARA IGUALAR EL NUMERO DE LINEAS /// ADD THE SIMPLE LINES FOR ALL CELLS BE EQUAL
-                        $nk.='
-                        ';
-                    }
-
-                    ///AGREGAMOS LAS LINEAS QUE LE FALTAN A CADA CELDA PARA LLEGAR AL MAXIMO  // ADD THE LINES TO EACH CELL TO REACH THE MAXIMUN HEIGHT OF THE ARRAY
-                    if(trim($data[$i])<>""){
-                        $data[$i]=trim($data[$i]).$nk;
-                    }else{
-                        $data[$i]=$data[$i].$nk;
-                    }
-                }
-
-            }
-            $nb = max($cellNb);
-
-            $h=($altoline*$nb)+$this->espaciado;
-            //Issue a page break first if needed
-            $this->CheckPageBreak($h);
-
-            //Draw the cells of the row
-            $w = $a = $x = $y = '';
-            $bordeLR = $border == 'LR';
-            for($i=0;$i<count($data);$i++) {
-                $page= $this->PageNo();
-                $borders = 0;
-                if( $bordeLR ){
-                    if($i == 0)
-                        $borders = 'L';
-                    elseif( $i == count($data)-1 )
-                        $borders = 'R';
-                }else if( !empty($this->arrayBorders) ){
-                    $borders = $this->arrayBorders[$i];
-                }else
-                    $borders = $this->borders;
-                $w = $this->widths[$i];
-                $a = isset($this->aligns[$i]) ? $this->aligns[$i] : 'L';
-                //Save the current position
-                $x=$this->GetX();
-                $y=$this->GetY();
-                //Draw the border
-                //Print the text
-
-                    $altura =(($h-$this->espaciado)/$cellNb[$i])+($this->espaciado/$cellNb[$i]);
-
-                if(!empty($this->fuentes)){
-                    $this->SetFont($this->fuentes[$i]->font,$this->fuentes[$i]->style,$this->fuentes[$i]->size);
-                }
-
-                if($this->relleno == "si")
-                {
-                $this->MultiCell($w,$altura,$data[$i],$borders,$a,true);}
-                else{$this->MultiCell($w,$altura,$data[$i],$borders,$a);
-                }
-                $this->page=$page;
-                //Put the position to the right of the cell
-                $this->SetXY($x+$w,$y);
-            }
-            $this->fuentes =  NULL;
-            //Go to the next line
-            $this->Ln($h);
-        }
-
-
-		function CheckPageBreak($h){
-			//If the height h would cause an overflow, add a new page immediately
-			if($this->GetY()+$h > $this->PageBreakTrigger)
-				{$this->AddPage($this->CurOrientation);
-				return true;}
-		}
-		function NbLines($w,$txt){
-			//Computes the number of lines a MultiCell of width w will take
-			$cw=&$this->CurrentFont['cw'];
-			if($w==0)
-				$w=$this->w-$this->rMargin-$this->x;
-			$wmax=($w-2*$this->cMargin)*1000/$this->FontSize;
-			$s=str_replace("\r",'',$txt);
-			$nb=strlen($s);
-			if($nb>0 and $s[$nb-1]=="\n")
-				$nb--;
-			$sep=-1;
-			$i=0;
-			$j=0;
-			$l=0;
-			$nl=1;
-			while($i<$nb){
-				$c=$s[$i];
-				if($c=="\n"){
-					$i++;
-					$sep=-1;
-					$j=$i;
-					$l=0;
-					$nl++;
-					continue;
-				}
-				if($c==' ')
-					$sep=$i;
-				$l+=$cw[$c];
-				if($l>$wmax) {
-					if($sep==-1){
-						if($i==$j)
-							$i++;
-					}
-					else
-						$i=$sep+1;
-					$sep=-1;
-					$j=$i;
-					$l=0;
-					$nl++;
+	function CheckPageBreak($h){
+		//If the height h would cause an overflow, add a new page immediately
+		if($this->GetY()+$h > $this->PageBreakTrigger)
+			{$this->AddPage($this->CurOrientation);
+			return true;}
+	}
+	function NbLines($w,$txt){
+		//Computes the number of lines a MultiCell of width w will take
+		$cw=&$this->CurrentFont['cw'];
+		if($w==0)
+			$w=$this->w-$this->rMargin-$this->x;
+		$wmax=($w-2*$this->cMargin)*1000/$this->FontSize;
+		$s=str_replace("\r",'',$txt);
+		$nb=strlen($s);
+		if($nb>0 and $s[$nb-1]=="\n")
+			$nb--;
+		$sep=-1;
+		$i=0;
+		$j=0;
+		$l=0;
+		$nl=1;
+		while($i<$nb){
+			$c=$s[$i];
+			if($c=="\n"){
+				$i++;
+				$sep=-1;
+				$j=$i;
+				$l=0;
+				$nl++;
+				continue;
+			}
+			if($c==' ')
+				$sep=$i;
+			$l+=$cw[$c];
+			if($l>$wmax) {
+				if($sep==-1){
+					if($i==$j)
+						$i++;
 				}
 				else
-					$i++;
-			}
-			return $nl;
-		}
-		function RoundedRect($x, $y, $w, $h, $r, $style = '', $angle = '1234'){
-
-		/*
-			x, y: top left corner of the rectangle.
-			w, h: width and height.
-			r: radius of the rounded corners.
-			style: same as Rect(): F, D (default), FD or DF.
-			angle: numbers of the corners to be rounded: 1, 2, 3, 4 or any combination (1=top left, 2=top right, 3=bottom right, 4=bottom left).
-		*/
-			$k = $this->k;
-			$hp = $this->h;
-			if($style=='F')
-				$op='f';
-			elseif($style=='FD' or $style=='DF')
-				$op='B';
-			else
-				$op='S';
-			$MyArc = 4/3 * (sqrt(2) - 1);
-			$this->_out(sprintf('%.2f %.2f m', ($x+$r)*$k, ($hp-$y)*$k ));
-
-			$xc = $x+$w-$r;
-			$yc = $y+$r;
-			$this->_out(sprintf('%.2f %.2f l', $xc*$k, ($hp-$y)*$k ));
-			if (strpos($angle, '2')===false)
-				$this->_out(sprintf('%.2f %.2f l', ($x+$w)*$k, ($hp-$y)*$k ));
-			else
-				$this->_Arc($xc + $r*$MyArc, $yc - $r, $xc + $r, $yc - $r*$MyArc, $xc + $r, $yc);
-
-			$xc = $x+$w-$r;
-			$yc = $y+$h-$r;
-			$this->_out(sprintf('%.2f %.2f l', ($x+$w)*$k, ($hp-$yc)*$k));
-			if (strpos($angle, '3')===false)
-				$this->_out(sprintf('%.2f %.2f l', ($x+$w)*$k, ($hp-($y+$h))*$k));
-			else
-				$this->_Arc($xc + $r, $yc + $r*$MyArc, $xc + $r*$MyArc, $yc + $r, $xc, $yc + $r);
-
-			$xc = $x+$r;
-			$yc = $y+$h-$r;
-			$this->_out(sprintf('%.2f %.2f l', $xc*$k, ($hp-($y+$h))*$k));
-			if (strpos($angle, '4')===false)
-				$this->_out(sprintf('%.2f %.2f l', ($x)*$k, ($hp-($y+$h))*$k));
-			else
-				$this->_Arc($xc - $r*$MyArc, $yc + $r, $xc - $r, $yc + $r*$MyArc, $xc - $r, $yc);
-
-			$xc = $x+$r ;
-			$yc = $y+$r;
-			$this->_out(sprintf('%.2f %.2f l', ($x)*$k, ($hp-$yc)*$k ));
-			if (strpos($angle, '1')===false)
-			{
-				$this->_out(sprintf('%.2f %.2f l', ($x)*$k, ($hp-$y)*$k ));
-				$this->_out(sprintf('%.2f %.2f l', ($x+$r)*$k, ($hp-$y)*$k ));
+					$i=$sep+1;
+				$sep=-1;
+				$j=$i;
+				$l=0;
+				$nl++;
 			}
 			else
-				$this->_Arc($xc - $r, $yc - $r*$MyArc, $xc - $r*$MyArc, $yc - $r, $xc, $yc - $r);
-			$this->_out($op);
+				$i++;
 		}
-		function _Arc($x1, $y1, $x2, $y2, $x3, $y3){
-			$h = $this->h;
-			$this->_out(sprintf('%.2f %.2f %.2f %.2f %.2f %.2f c ', $x1*$this->k, ($h-$y1)*$this->k,
-				$x2*$this->k, ($h-$y2)*$this->k, $x3*$this->k, ($h-$y3)*$this->k));
+		return $nl;
+	}
+	function RoundedRect($x, $y, $w, $h, $r, $style = '', $angle = '1234'){
+
+	/*
+		x, y: top left corner of the rectangle.
+		w, h: width and height.
+		r: radius of the rounded corners.
+		style: same as Rect(): F, D (default), FD or DF.
+		angle: numbers of the corners to be rounded: 1, 2, 3, 4 or any combination (1=top left, 2=top right, 3=bottom right, 4=bottom left).
+	*/
+		$k = $this->k;
+		$hp = $this->h;
+		if($style=='F')
+			$op='f';
+		elseif($style=='FD' or $style=='DF')
+			$op='B';
+		else
+			$op='S';
+		$MyArc = 4/3 * (sqrt(2) - 1);
+		$this->_out(sprintf('%.2f %.2f m', ($x+$r)*$k, ($hp-$y)*$k ));
+
+		$xc = $x+$w-$r;
+		$yc = $y+$r;
+		$this->_out(sprintf('%.2f %.2f l', $xc*$k, ($hp-$y)*$k ));
+		if (strpos($angle, '2')===false)
+			$this->_out(sprintf('%.2f %.2f l', ($x+$w)*$k, ($hp-$y)*$k ));
+		else
+			$this->_Arc($xc + $r*$MyArc, $yc - $r, $xc + $r, $yc - $r*$MyArc, $xc + $r, $yc);
+
+		$xc = $x+$w-$r;
+		$yc = $y+$h-$r;
+		$this->_out(sprintf('%.2f %.2f l', ($x+$w)*$k, ($hp-$yc)*$k));
+		if (strpos($angle, '3')===false)
+			$this->_out(sprintf('%.2f %.2f l', ($x+$w)*$k, ($hp-($y+$h))*$k));
+		else
+			$this->_Arc($xc + $r, $yc + $r*$MyArc, $xc + $r*$MyArc, $yc + $r, $xc, $yc + $r);
+
+		$xc = $x+$r;
+		$yc = $y+$h-$r;
+		$this->_out(sprintf('%.2f %.2f l', $xc*$k, ($hp-($y+$h))*$k));
+		if (strpos($angle, '4')===false)
+			$this->_out(sprintf('%.2f %.2f l', ($x)*$k, ($hp-($y+$h))*$k));
+		else
+			$this->_Arc($xc - $r*$MyArc, $yc + $r, $xc - $r, $yc + $r*$MyArc, $xc - $r, $yc);
+
+		$xc = $x+$r ;
+		$yc = $y+$r;
+		$this->_out(sprintf('%.2f %.2f l', ($x)*$k, ($hp-$yc)*$k ));
+		if (strpos($angle, '1')===false)
+		{
+			$this->_out(sprintf('%.2f %.2f l', ($x)*$k, ($hp-$y)*$k ));
+			$this->_out(sprintf('%.2f %.2f l', ($x+$r)*$k, ($hp-$y)*$k ));
 		}
-		function Rotate($angle,$x=-1,$y=-1){
-			if($x==-1)
-				$x=$this->x;
-			if($y==-1)
-				$y=$this->y;
-			if($this->angle!=0)
-				$this->_out('Q');
-			$this->angle=$angle;
-			if($angle!=0)
-			{
-				$angle*=M_PI/180;
-				$c=cos($angle);
-				$s=sin($angle);
-				$cx=$x*$this->k;
-				$cy=($this->h-$y)*$this->k;
-				$this->_out(sprintf('q %.5F %.5F %.5F %.5F %.2F %.2F cm 1 0 0 1 %.2F %.2F cm',$c,$s,-$s,$c,$cx,$cy,-$cx,-$cy));
-			}
+		else
+			$this->_Arc($xc - $r, $yc - $r*$MyArc, $xc - $r*$MyArc, $yc - $r, $xc, $yc - $r);
+		$this->_out($op);
+	}
+	function _Arc($x1, $y1, $x2, $y2, $x3, $y3){
+		$h = $this->h;
+		$this->_out(sprintf('%.2f %.2f %.2f %.2f %.2f %.2f c ', $x1*$this->k, ($h-$y1)*$this->k,
+			$x2*$this->k, ($h-$y2)*$this->k, $x3*$this->k, ($h-$y3)*$this->k));
+	}
+	function Rotate($angle,$x=-1,$y=-1){
+		if($x==-1)
+			$x=$this->x;
+		if($y==-1)
+			$y=$this->y;
+		if($this->angle!=0)
+			$this->_out('Q');
+		$this->angle=$angle;
+		if($angle!=0)
+		{
+			$angle*=M_PI/180;
+			$c=cos($angle);
+			$s=sin($angle);
+			$cx=$x*$this->k;
+			$cy=($this->h-$y)*$this->k;
+			$this->_out(sprintf('q %.5F %.5F %.5F %.5F %.2F %.2F cm 1 0 0 1 %.2F %.2F cm',$c,$s,-$s,$c,$cx,$cy,-$cx,-$cy));
 		}
-		function _endpage(){
-			if($this->angle!=0)
-			{
-				$this->angle=0;
-				$this->_out('Q');
-			}
-			parent::_endpage();
+	}
+	function _endpage(){
+		if($this->angle!=0)
+		{
+			$this->angle=0;
+			$this->_out('Q');
 		}
-		function RotatedText($x, $y, $txt, $angle){
-			//Text rotated around its origin
-			$this->Rotate($angle,$x,$y);
-			$this->Text($x,$y,$txt);
-			$this->Rotate(0);
-		}
+		parent::_endpage();
+	}
+	function RotatedText($x, $y, $txt, $angle){
+		//Text rotated around its origin
+		$this->Rotate($angle,$x,$y);
+		$this->Text($x,$y,$txt);
+		$this->Rotate(0);
+	}
+	function RC4($key, $data)
+    {
+        if(function_exists('mcrypt_encrypt'))
+        {
+            return mcrypt_encrypt(MCRYPT_ARCFOUR, $key, $data, MCRYPT_MODE_STREAM, '');
+        }
+        else
+        {
+            static $last_key, $last_state;
+
+            if($key != $last_key)
+            {
+                $k = str_repeat($key, 256/strlen($key)+1);
+                $state = range(0, 255);
+                $j = 0;
+                for ($i=0; $i<256; $i++){
+                    $t = $state[$i];
+                    $j = ($j + $t + ord($k[$i])) % 256;
+                    $state[$i] = $state[$j];
+                    $state[$j] = $t;
+                }
+                $last_key = $key;
+                $last_state = $state;
+            }
+            else
+                $state = $last_state;
+
+            $len = strlen($data);
+            $a = 0;
+            $b = 0;
+            $out = '';
+            for ($i=0; $i<$len; $i++){
+                $a = ($a+1) % 256;
+                $t = $state[$a];
+                $b = ($b+$t) % 256;
+                $state[$a] = $state[$b];
+                $state[$b] = $t;
+                $k = $state[($state[$a]+$state[$b]) % 256];
+                $out .= chr(ord($data[$i]) ^ $k);
+            }
+            return $out;
+        }
+    }
 
 }
 ?>

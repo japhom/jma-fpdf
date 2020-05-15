@@ -1,5 +1,5 @@
 {
-    "name": "crabbly/fpdf-laravel",
+    "name": "japhom/fpdf-laravel",
     "description": "Laravel package for FPDF.",
     "license": "MIT",
     "keywords": ["laravel", "fpdf"],
@@ -7,6 +7,9 @@
         {
             "name": "Rodrigo Vieira",
             "email": "rodrigo@crabbly.com"
+        },{
+            "name":"Japhet Mata",
+            "email":"japhetmata@gmail.com"
         }
     ],
     "require": {
@@ -32,7 +35,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Crabbly\\Fpdf\\FpdfServiceProvider"
+                "Japhom\\Fpdf\\FpdfServiceProvider"
             ]
         }
     }

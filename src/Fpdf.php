@@ -1,6 +1,6 @@
 <?php
 
-namespace Crabbly\Fpdf;
+namespace Japhom\Fpdf;
 
 /*******************************************************************************
 * FPDF                                                                         *

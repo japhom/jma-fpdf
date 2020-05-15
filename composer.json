@@ -5,11 +5,12 @@
     "keywords": ["laravel", "fpdf"],
     "authors": [
         {
-            "name": "Rodrigo Vieira",
-            "email": "rodrigo@crabbly.com"
-        },{
             "name":"Japhet Mata",
             "email":"japhetmata@gmail.com"
+        },
+        {
+            "name": "Rodrigo Vieira",
+            "email": "rodrigo@crabbly.com"
         }
     ],
     "require": {

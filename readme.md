@@ -1,3 +1,9 @@
+Esto es un fork de 
+https://github.com/crabbly/fpdf-laravel
+
+Yo soloagregue algunas funciones para encryptado de PDF y calculos de alturas para multiples celdas, asi como desbordamients en el verificado de auto salto de página.
+
+
 # FPDF - Laravel
 
 A package for Laravel to implement the FPDF class.
@@ -13,7 +19,7 @@ FPDF Official Website:
 From the command line, run:
 
 ```
-composer require crabbly/fpdf-laravel
+composer require japhom/fpdf-laravel
 ```
 
 ### Step 2: Service Provider
@@ -21,7 +27,7 @@ composer require crabbly/fpdf-laravel
 For your Laravel app, open `config/app.php` and, within the `providers` array, append:
 
 ```
-Crabbly\Fpdf\FpdfServiceProvider::class
+Japhom\Fpdf\FpdfServiceProvider::class
 ```
 
 This will bootstrap the package into Laravel.
@@ -39,7 +45,7 @@ $pdf = app('Fpdf');
 We can also instantiate it directly:
 
 ```
-$pdf = new Crabbly\Fpdf\Fpdf;
+$pdf = new Japhom\Fpdf\Fpdf;
 ```
 
 ## FPDF Documentation
@@ -65,8 +71,6 @@ Storage::put($pdf->Output('S'));
 
 ## Contribution
 
-Pull requests are welcome.
-Please report any issue you find in the issues page.
 
 ## License
 

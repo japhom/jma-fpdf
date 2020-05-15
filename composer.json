@@ -24,7 +24,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Crabbly\\Fpdf\\": "src/"
+            "Japhom\\Fpdf\\": "src/"
         }
     },
     "autoload-dev": {

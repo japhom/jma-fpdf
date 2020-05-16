@@ -64,6 +64,7 @@ $pdf = app('Fpdf');
 $pdf->AddPage();
 $pdf->SetFont('Arial','B',16);
 $pdf->Cell(40,10,'Hello World!');
+$pdf->SetProtection(array('print', 'annot-forms'),"","password");
 
 //save file
 Storage::put($pdf->Output('S'));

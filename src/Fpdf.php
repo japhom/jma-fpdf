@@ -1158,6 +1158,10 @@ class FPDF
 
 	protected function _endpage()
 	{
+		if($this->angle!=0) {
+			$this->angle=0;
+			$this->_out('Q');
+		}
 		$this->state = 1;
 	}
 
@@ -1248,6 +1252,8 @@ class FPDF
 		// Format a text string
 		if(!$this->_isascii($s))
 			$s = $this->_UTF8toUTF16($s);
+		if ($this->encrypted)
+                $s = RC4($this->_objectkey($this->n), $s);
 		return '('.$this->_escape($s).')';
 	}
 
@@ -1499,6 +1505,8 @@ class FPDF
 
 	protected function _putstream($data)
 	{
+		if ($this->encrypted)
+		    $data = $this->RC4($this->_objectkey($this->n), $data);
 		$this->_put('stream');
 		$this->_put($data);
 		$this->_put('endstream');
@@ -1843,6 +1851,15 @@ class FPDF
 		$this->_putresourcedict();
 		$this->_put('>>');
 		$this->_put('endobj');
+
+		if ($this->encrypted) {
+            $this->_newobj();
+            $this->enc_obj_id = $this->n;
+            $this->_put('<<');
+            $this->_putencryption();
+            $this->_put('>>');
+            $this->_put('endobj');
+        }
 	}
 
 	protected function _putinfo()
@@ -1884,6 +1901,11 @@ class FPDF
 		$this->_put('/Size '.($this->n+1));
 		$this->_put('/Root '.$this->n.' 0 R');
 		$this->_put('/Info '.($this->n-1).' 0 R');
+
+		if ($this->encrypted) {
+            $this->_put('/Encrypt '.$this->enc_obj_id.' 0 R');
+            $this->_put('/ID [()()]');
+        }
 	}
 
 	protected function _enddoc()
@@ -1945,20 +1967,7 @@ class FPDF
     *                              Private methods                              *
     *                                                                           *
     ****************************************************************************/
-    function _putstream($s)
-    {
-        if ($this->encrypted)
-            $s = $this->RC4($this->_objectkey($this->n), $s);
-        parent::_putstream($s);
-    }
-    function _textstring($s)
-    {
-        if (!$this->_isascii($s))
-            $s = $this->_UTF8toUTF16($s);
-        if ($this->encrypted)
-            $s = $this->RC4($this->_objectkey($this->n), $s);
-        return '('.$this->_escape($s).')';
-    }
+    
     /**
     * Compute key depending on object number where the encrypted data is stored
     */
@@ -1966,18 +1975,7 @@ class FPDF
     {
         return substr($this->_md5_16($this->encryption_key.pack('VXxx',$n)),0,10);
     }
-    function _putresources()
-    {
-        parent::_putresources();
-        if ($this->encrypted) {
-            $this->_newobj();
-            $this->enc_obj_id = $this->n;
-            $this->_put('<<');
-            $this->_putencryption();
-            $this->_put('>>');
-            $this->_put('endobj');
-        }
-    }
+    
     function _putencryption()
     {
         $this->_put('/Filter /Standard');
@@ -1987,14 +1985,7 @@ class FPDF
         $this->_put('/U ('.$this->_escape($this->Uvalue).')');
         $this->_put('/P '.$this->Pvalue);
     }
-    function _puttrailer()
-    {
-        parent::_puttrailer();
-        if ($this->encrypted) {
-            $this->_put('/Encrypt '.$this->enc_obj_id.' 0 R');
-            $this->_put('/ID [()()]');
-        }
-    }
+    
     /**
     * Get MD5 as binary string
     */
@@ -2330,14 +2321,7 @@ class FPDF
 			$this->_out(sprintf('q %.5F %.5F %.5F %.5F %.2F %.2F cm 1 0 0 1 %.2F %.2F cm',$c,$s,-$s,$c,$cx,$cy,-$cx,-$cy));
 		}
 	}
-	function _endpage(){
-		if($this->angle!=0)
-		{
-			$this->angle=0;
-			$this->_out('Q');
-		}
-		parent::_endpage();
-	}
+	
 	function RotatedText($x, $y, $txt, $angle){
 		//Text rotated around its origin
 		$this->Rotate($angle,$x,$y);

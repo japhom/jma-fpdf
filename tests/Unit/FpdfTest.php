@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Entities\Api;
 
-use Crabbly\Fpdf\FPDF;
+use Japhom\Fpdf\FPDF;
 use Tests\BaseUnitTestCase;
 use Throwable;
 

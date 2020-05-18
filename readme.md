@@ -1,7 +1,10 @@
 Esto es un fork de 
 https://github.com/crabbly/fpdf-laravel
 
-Yo soloagregue algunas funciones para encryptado de PDF y calculos de alturas para multiples celdas, asi como desbordamients en el verificado de auto salto de página.
+Se agrega encriptado del PDF con contrseña
+Proteccion para impresion, apertura, anotaciones
+Lectura de Fuentes externao diferente a fnt/
+Otras funciones simples como getPage, getOrientation,setOrientation
 
 
 # FPDF - Laravel
@@ -45,7 +48,7 @@ $pdf = app('Fpdf');
 We can also instantiate it directly:
 
 ```
-$pdf = new Japhom\Fpdf\Fpdf;
+$pdf = new \Japhom\Fpdf\Fpdf;
 ```
 
 ## FPDF Documentation

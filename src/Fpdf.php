@@ -71,6 +71,7 @@ class FPDF
     protected $PDFVersion;         // PDF version number
     protected $datos;
     protected $datosAnt;
+    protected $extrafontpath;
 
     var $widths;
     var $aligns;
@@ -1198,6 +1199,7 @@ class FPDF
         if ( $path !=='') {
             $extra = dirname(__file__);
             $extra  .='/../../../../';
+            $this->extrafontpath = $extra.$path.'/';
             include($extra.$path.'/'.$font);
         } else {
             include($this->fontpath.$font);
@@ -1639,7 +1641,12 @@ class FPDF
             // Font file embedding
             $this->_newobj();
             $this->FontFiles[$file]['n'] = $this->n;
-            $font = file_get_contents($this->fontpath.$file,true);
+            if ( file_exists($this->fontpath.$file) ) {
+                $font = file_get_contents($this->fontpath.$file,true);
+            }else if ( file_exists($this->extrafontpath.$file) ) {
+                $font = file_get_contents($this->extrafontpath.$file,true);
+            }
+
             if(!$font)
                 $this->Error('Font file not found: '.$file);
             $compressed = (substr($file,-2)=='.z');

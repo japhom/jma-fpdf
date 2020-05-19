@@ -1,4 +1,4 @@
-Esto es un fork de 
+Esto es parte del trabakp de 
 https://github.com/crabbly/fpdf-laravel
 
 Se agrega encriptado del PDF con contrseña

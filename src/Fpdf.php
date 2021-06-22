@@ -667,6 +667,14 @@ class FPDF
                 $dx = $w-$this->cMargin-$this->GetStringWidth($txt);
             elseif($align=='C')
                 $dx = ($w-$this->GetStringWidth($txt))/2;
+            elseif($align=='FJ')
+            {
+                //Set word spacing
+                $wmax=($w-2*$this->cMargin);
+                $this->ws=($wmax-$this->GetStringWidth($txt))/(substr_count($txt,' ')> 0 ? substr_count($txt,' ') : 1);
+                $this->_out(sprintf('%.3F Tw',$this->ws*$this->k));
+                $dx=$this->cMargin;
+            }
             else
                 $dx = $this->cMargin;
             if($this->ColorFlag)

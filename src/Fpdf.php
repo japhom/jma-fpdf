@@ -661,6 +661,9 @@ class FPDF
         }
         if($txt!=='')
         {
+            if ($this->ws > 0) {
+                $this->ws = 0;
+            }
             if(!isset($this->CurrentFont))
                 $this->Error('No font has been set');
             if($align=='R')

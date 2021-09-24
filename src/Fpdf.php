@@ -661,9 +661,6 @@ class FPDF
         }
         if($txt!=='')
         {
-            if ($this->ws > 0) {
-                $this->ws = 0;
-            }
             if(!isset($this->CurrentFont))
                 $this->Error('No font has been set');
             if($align=='R')
@@ -693,6 +690,13 @@ class FPDF
         if($s)
             $this->_out($s);
         $this->lasth = $h;
+
+        if ($align == 'FJ') {
+            // if was forced to justify then reset the word spacing
+            $this->_out('0 Tw');
+            $this->ws = 0;
+        }
+
         if($ln>0)
         {
             // Go to next line
